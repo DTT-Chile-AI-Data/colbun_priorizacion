@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Priorización de Agentes de IA · Colbún</title>
+<style>
+:root{
+  --ink:#1A1A1A; --muted:#5F6B76; --line:#DDE2E7; --bg:#F4F6F8; --card:#FFFFFF;
+  --navy:#0E2233; --ok:#2E7D32; --warn:#B26A00; --danger:#C62828;
+  --acc:#0E2233; --acc-ink:#FFFFFF; --acc-soft:#EEF1F4;
+  --radius:10px; --shadow:0 1px 3px rgba(14,34,51,.08),0 4px 14px rgba(14,34,51,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:var(--ink);background:var(--bg);font-size:16px;line-height:1.4}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible,.agent-name:focus-visible{outline:3px solid #2B7BD8;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Header */
+header.top{background:var(--navy);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header.top .brand{font-weight:700;letter-spacing:.2px;font-size:1.05rem}
+header.top .brand span{font-weight:400;opacity:.75}
+header.top .sep{flex:1}
+header.top .tag{font-size:.82rem;opacity:.8}
+.accent-bar{height:5px;background:var(--acc)}
+
+main{max-width:1280px;margin:0 auto;padding:28px}
+h1{font-size:1.7rem;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 22px}
+
+/* Selección de proceso */
+.proc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.proc-card{border:none;border-radius:var(--radius);padding:26px 22px;text-align:left;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:14px;min-height:190px;transition:transform .12s ease,box-shadow .12s ease;position:relative}
+.proc-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(14,34,51,.16)}
+.proc-card .pname{font-size:1.3rem;font-weight:700;line-height:1.2}
+.proc-card .pcount{font-size:2.6rem;font-weight:800;line-height:1;margin-top:auto}
+.proc-card .pcount small{font-size:1rem;font-weight:600;margin-left:6px}
+.proc-card .pstatus{font-size:.85rem;font-weight:600;opacity:.92}
+
+/* Barra de proceso */
+.toolbar{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.toolbar .titles{flex:1;min-width:260px}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;font-size:.85rem;background:var(--acc);color:var(--acc-ink);margin-bottom:6px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 16px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{background:#F0F2F5}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.primary:hover{background:#1B3550}
+.btn.secondary{background:var(--acc-soft);border-color:var(--line);color:var(--ink)}
+.btn.secondary:hover{background:#E8EDF1}
+.btn.danger{color:var(--danger);border-color:#F1C7C7}
+.btn.danger:hover{background:#FDF1F1}
+
+.statusbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#fff;border-radius:var(--radius);padding:12px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+.progress-text{font-weight:700;white-space:nowrap}
+.progress{flex:1;min-width:160px;height:10px;background:#E7EBEF;border-radius:999px;overflow:hidden}
+.progress > div{height:100%;background:var(--acc);transition:width .25s ease}
+.note{font-size:.86rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.note b{color:var(--ink)}
+.legend{order:9;flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.84rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.lg{display:inline-flex;align-items:center;gap:6px}
+.lg::before{content:"";width:10px;height:10px;border-radius:3px;flex:none}
+.lg b{color:var(--ink)}
+.lg-p::before{background:#4CAF50}.lg-n::before{background:#9AA5B1}.lg-d::before{background:#D9534F}
+.saved{font-size:.8rem;color:var(--ok);opacity:0;transition:opacity .3s}
+.saved.show{opacity:1}
+
+/* Tarjetas */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border-left:6px solid var(--acc);
+  display:grid;grid-template-columns:34px 56px minmax(220px,1fr) minmax(280px,1.35fr) 44px;gap:14px;align-items:start;padding:14px 14px 14px 10px}
+.card.flash{animation:flash .7s ease}
+@keyframes flash{0%{background:var(--acc-soft)}100%{background:var(--card)}}
+.handle{width:34px;height:44px;border:none;background:transparent;color:#9AA5B1;cursor:grab;touch-action:none;display:flex;align-items:center;justify-content:center;border-radius:6px;padding:0}
+.handle:hover{background:#F0F2F5;color:var(--ink)}
+.handle:active{cursor:grabbing}
+.pos{width:52px;height:52px;border-radius:10px;background:var(--acc);color:var(--acc-ink);font-weight:800;font-size:1.5rem;display:flex;align-items:center;justify-content:center}
+.meta{display:flex;flex-direction:column;gap:6px;padding-top:2px;min-width:0}
+.idchip{align-self:flex-start;font-size:.78rem;font-weight:700;color:var(--muted);background:#EEF1F4;border-radius:6px;padding:2px 8px}
+.agent-name{background:none;border:none;padding:0;text-align:left;font-weight:700;font-size:1.05rem;color:var(--ink);line-height:1.25;text-decoration:underline;text-decoration-color:#C3CAD2;text-underline-offset:3px}
+.agent-name:hover{text-decoration-color:var(--ink)}
+.agent-name .eye{font-size:.78rem;font-weight:600;color:var(--muted);margin-left:6px;white-space:nowrap;text-decoration:none;display:inline-block}
+.fields{display:flex;flex-direction:column;gap:8px;min-width:0}
+.field label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:3px}
+.field label .req{color:var(--danger)}
+.field textarea,.field input,.field select{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:.95rem;background:#FBFCFD;color:var(--ink)}
+.field textarea{min-height:64px;resize:vertical}
+.field select{max-width:220px;font-weight:600}
+.field select[data-valor="Descartar"]{background:#FDECEC;border-color:#E9A9A9;color:#A61B1B}
+.field select[data-valor="Neutral"]{background:#EEF1F4;border-color:#C3CAD2;color:#3D4852}
+.field select[data-valor="Priorizar"]{background:#E8F5E9;border-color:#9CCB9F;color:#1E6B23}
+.field.ok textarea,.field.ok input,.field.ok select{border-color:#B9D8BC;background:#fff}
+.moves{display:flex;flex-direction:column;gap:6px}
+.mv{width:40px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;color:var(--ink)}
+.mv:hover:not(:disabled){background:#F0F2F5}
+.mv:disabled{opacity:.35;cursor:default}
+
+/* Arrastre */
+.card.dragging{position:fixed;z-index:50;pointer-events:none;box-shadow:0 14px 34px rgba(14,34,51,.28);opacity:.96}
+.placeholder{border:2px dashed var(--acc);border-radius:var(--radius);background:var(--acc-soft)}
+body.is-dragging{user-select:none;cursor:grabbing}
+
+/* Panel lateral */
+.overlay{position:fixed;inset:0;background:rgba(14,34,51,.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+.overlay.open{opacity:1;pointer-events:auto}
+aside.panel{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:#fff;z-index:90;transform:translateX(100%);transition:transform .25s ease;
+  display:flex;flex-direction:column;visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+aside.panel.open{transform:none;visibility:visible;box-shadow:-8px 0 30px rgba(14,34,51,.18);transition:transform .25s ease}
+.panel-head{padding:20px 24px 16px;border-top:6px solid var(--acc);border-bottom:1px solid var(--line)}
+.panel-head .row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.panel-head h2{margin:0;font-size:1.3rem;line-height:1.25}
+.panel-close{margin-left:auto;border:none;background:#F0F2F5;border-radius:8px;width:36px;height:36px;font-size:1.2rem}
+.panel-body{padding:20px 24px;overflow:auto;flex:1}
+.panel-body h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 8px}
+.panel-body p{margin:0 0 22px}
+.panel-body ul{margin:0;padding-left:20px}
+.panel-body li{margin-bottom:8px}
+.panel-body li::marker{color:var(--acc-mark,var(--acc))}
+.panel-foot{display:flex;gap:10px;align-items:center;padding:14px 24px;border-top:1px solid var(--line)}
+.panel-foot .counter{flex:1;text-align:center;color:var(--muted);font-size:.9rem}
+
+/* Modal */
+.modal-wrap{position:fixed;inset:0;background:rgba(14,34,51,.45);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
+.modal-wrap.open{display:flex}
+.modal{background:#fff;border-radius:12px;max-width:520px;width:100%;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal h2{margin:0 0 8px;font-size:1.2rem}
+.modal p{margin:0 0 12px;color:#333}
+.modal ul{margin:0 0 12px;padding-left:20px;max-height:180px;overflow:auto;font-size:.92rem}
+.modal .actions{justify-content:flex-end;margin-top:8px}
+
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:10px 0 26px}
+.hidden{display:none!important}
+
+@media (max-width:980px){
+  main{padding:18px}
+  .card{grid-template-columns:30px 48px 1fr 44px;grid-template-areas:"h p m v" "f f f f"}
+  .card .handle{grid-area:h}.card .pos{grid-area:p;width:46px;height:46px;font-size:1.3rem}
+  .card .meta{grid-area:m}.card .fields{grid-area:f}.card .moves{grid-area:v;flex-direction:row}
+  .card{grid-template-columns:30px 48px 1fr auto}
+}
+@media (max-width:560px){
+  header.top{padding:12px 16px}
+  h1{font-size:1.35rem}
+  .actions .btn{flex:1;justify-content:center}
+}
+@media (min-width:1600px){ body{font-size:17px} main{max-width:1480px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Estrategia de IA <span>· Colbún</span></div>
+  <div class="sep"></div>
+  <div class="tag">Priorización de agentes por proceso</div>
+</header>
+<div class="accent-bar" id="accentBar"></div>
+
+<main>
+  <!-- Pantalla 1: selección -->
+  <section id="viewSelect">
+    <h1>Selecciona tu proceso</h1>
+    <p class="sub">Elige el proceso por el que responderás.</p>
+    <div class="proc-grid" id="procGrid"></div>
+  </section>
+
+  <!-- Pantalla 2: ranking -->
+  <section id="viewRank" class="hidden">
+    <div class="toolbar">
+      <div class="titles">
+        <div class="pill" id="procPill"></div>
+        <h1>Ordena los agentes según tu preferencia</h1>
+        <p class="sub" style="margin:0">Ordena los agentes arrastrándolos o con las flechas (1 = mayor preferencia). Para cada uno, indica tu decisión y justifica su posición.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btnChange" type="button">⇄ Cambiar proceso</button>
+        <button class="btn danger" id="btnReset" type="button">↺ Restablecer</button>
+        <button class="btn secondary" id="btnSaveDb" type="button">💾 Guardar en PostgreSQL</button>
+        <button class="btn primary" id="btnDownload" type="button">⬇ Descargar Excel</button>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span class="progress-text" id="progressText"></span>
+      <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+      <div class="respondent-box">
+        <label for="respondentEmail">Email del responsable <span class="req">*</span></label>
+        <input id="respondentEmail" type="email" autocomplete="email" placeholder="usuario@empresa.cl" required value="" />
+      </div>
+      <span class="note">ⓘ <span>El orden inicial es por ID: <b>es un orden de partida, no una sugerencia.</b></span></span>
+      <div class="legend" aria-label="Leyenda de decisión">
+        <span class="lg lg-p"><b>Priorizar:</b> me interesa que se desarrolle este agente.</span>
+        <span class="lg lg-n"><b>Neutral:</b> me es indiferente / opinión neutral.</span>
+        <span class="lg lg-d"><b>Descartar:</b> no quiero que se desarrolle este agente.</span>
+      </div>
+      <span class="saved" id="savedMsg">✓ Guardado</span>
+    </div>
+    <ol class="list" id="list" aria-label="Ranking de agentes"></ol>
+    <p class="sr" aria-live="polite" id="live"></p>
+  </section>
+</main>
+<footer>Avance guardado automáticamente en este navegador.</footer>
+
+<!-- Panel lateral -->
+<div class="overlay" id="overlay"></div>
+<aside class="panel" id="panel" aria-hidden="true" role="dialog" aria-labelledby="pTitle">
+  <div class="panel-head">
+    <div class="row">
+      <span class="pill" id="pProc" style="margin:0"></span>
+      <span class="idchip" id="pId"></span>
+      <button class="panel-close" id="pClose" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <h2 id="pTitle"></h2>
+  </div>
+  <div class="panel-body">
+    <h3>Descripción</h3>
+    <p id="pDesc"></p>
+    <h3>Funcionalidades</h3>
+    <ul id="pFun"></ul>
+  </div>
+  <div class="panel-foot">
+    <button class="btn" id="pPrev" type="button">← Anterior</button>
+    <span class="counter" id="pCounter"></span>
+    <button class="btn" id="pNext" type="button">Siguiente →</button>
+  </div>
+</aside>
+
+<!-- Modal de confirmación -->
+<div class="modal-wrap" id="modalWrap" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal">
+    <h2 id="mTitle"></h2>
+    <p id="mText"></p>
+    <ul id="mList"></ul>
+    <div class="actions">
+      <button class="btn" id="mCancel" type="button">Cancelar</button>
+      <button class="btn primary" id="mOk" type="button">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Datos fuente: hoja "Instrucciones" (ID, Nombre, Owner → proceso, Descripción, Funcionalidades) -->
+<script type="application/json" id="data-agentes">[
+ {
+  "id": 1,
+  "nombre": "Agente de Integración de Clientes (Salesforce-SAP)",
+  "proceso": "ingresos",
+  "descripcion": "Traspasa altas, renovaciones, cesiones y términos de clientes desde Salesforce a SAP IS-U, convirtiéndolos en datos maestros listos para facturar.",
+  "funcionalidades": [
+   "Extraer el informe de clientes desde Salesforce.",
+   "Clasificar altas, renovaciones, cesiones y términos.",
+   "Homologar los campos de Salesforce a la codificación de SAP.",
+   "Identificar datos faltantes o inconsistentes.",
+   "Asignar cada cliente a la cartera correspondiente.",
+   "Cargar los datos maestros en SAP IS-U y generar las comunicaciones para distribuidoras, Coordinador y SEC."
+  ]
+ },
+ {
+  "id": 2,
+  "nombre": "Agente de Integración de Medidas Quinceminutales",
+  "proceso": "ingresos",
+  "descripcion": "Integra en SAP IS-U las medidas quinceminutales provenientes de distribuidoras, Primeread y clientes, verificando que los empalmes, pulsos y consumos estén completos y consistentes antes de su utilización en facturación.",
+  "funcionalidades": [
+   "Recibir medidas quinceminutales desde distribuidoras, Primeread y clientes.",
+   "Homologar formatos para carga en SAP.",
+   "Verificar empalmes, pulsos y consistencia de las medidas.",
+   "Identificar diferencias entre medidas reales, proyectadas e históricas.",
+   "Estimar el impacto potencial de anomalías en la facturación.",
+   "Cargar las medidas validadas en SAP IS-U y generar el archivo de consumos para Estudios y Transferencias."
+  ]
+ },
+ {
+  "id": 3,
+  "nombre": "Agente de Carga de Variables y Cargos Regulados",
+  "proceso": "ingresos",
+  "descripcion": "Obtiene variables macroeconómicas y cargos regulados desde fuentes oficiales, incorporándolos al proceso de facturación y manteniendo trazabilidad de su origen.",
+  "funcionalidades": [
+   "Monitorear publicaciones de la CNE, Coordinador y otras fuentes oficiales.",
+   "Extraer Brent, CPI, tipo de cambio, peajes y cargos sistémicos.",
+   "Comparar valores contra periodos anteriores.",
+   "Identificar variaciones relevantes o inusuales.",
+   "Cargar automáticamente las variables en SAP y registrar las fuentes utilizadas para auditoría."
+  ]
+ },
+ {
+  "id": 4,
+  "nombre": "Agente de Cálculo de Clientes Libres",
+  "proceso": "ingresos",
+  "descripcion": "Calcula y prepara la facturación de Clientes Libres a partir de consumos, contratos, indexadores y condiciones comerciales, utilizando la experiencia histórica de cálculo y los criterios aplicados previamente por el equipo.",
+  "funcionalidades": [
+   "Recibir consumos, contratos y condiciones comerciales de los Clientes Libres.",
+   "Analizar contratos vigentes y criterios históricos utilizados en cálculos similares.",
+   "Aplicar precios, indexadores y reglas contractuales definidas.",
+   "Calcular energía, potencia y cargos asociados por cliente.",
+   "Generar proformas y respaldos con memoria de cálculo y trazabilidad completa.",
+   "Preparar la propuesta de facturación para revisión y aprobación humana."
+  ]
+ },
+ {
+  "id": 5,
+  "nombre": "Agente Auditor de Facturación",
+  "proceso": "ingresos",
+  "descripcion": "Audita los resultados de facturación antes de su emisión, identificando posibles errores e inconsistencias para revisión.",
+  "funcionalidades": [
+   "Recibir documentos de cálculo y facturación.",
+   "Comparar resultados contra el historial de cada cliente.",
+   "Detectar montos fuera de rango o cargos inconsistentes.",
+   "Verificar inclusión de intereses, peajes y cargos sistémicos.",
+   "Revisar excepciones y rechazos de facturación.",
+   "Emitir un informe de observaciones y recomendaciones para revisión humana."
+  ]
+ },
+ {
+  "id": 6,
+  "nombre": "Agente de Cálculo de Reliquidaciones",
+  "proceso": "ingresos",
+  "descripcion": "Calcula diferencias derivadas de reliquidaciones y ajustes de consumo, recomendando el tratamiento más adecuado según precedentes y resoluciones históricas similares.",
+  "funcionalidades": [
+   "Recibir bases de reliquidación y ajustes de distribuidoras.",
+   "Identificar clientes y documentos afectados.",
+   "Calcular diferencias respecto de lo facturado.",
+   "Analizar casos históricos comparables y acciones previamente adoptadas.",
+   "Identificar compensaciones potenciales con deuda vigente.",
+   "Proponer anulación, refacturación o nota de crédito con su respectiva justificación para aprobación humana."
+  ]
+ },
+ {
+  "id": 7,
+  "nombre": "Agente Auditor de Balances CEN",
+  "proceso": "ingresos",
+  "descripcion": "Analiza los balances preliminares y definitivos emitidos por el Coordinador Eléctrico Nacional, identificando diferencias entre los suministros reconocidos por el mercado y los registrados por Colbún para apoyar la gestión del Mercado Spot.",
+  "funcionalidades": [
+   "Recibir balances preliminares y definitivos del CEN.",
+   "Comparar suministros, clientes y contratos contra SAP, BW y Salesforce.",
+   "Detectar diferencias en inicios, términos, renovaciones y suministros informados.",
+   "Identificar documentos pendientes que puedan explicar diferencias.",
+   "Generar observaciones y propuestas de corrección para Estudios y Transferencias."
+  ]
+ },
+ {
+  "id": 8,
+  "nombre": "Agente de Gestión de Documentos Pass-Through",
+  "proceso": "ingresos",
+  "descripcion": "Gestiona la documentación asociada a peajes, cargos sistémicos, PEC e instrucciones de pago del Mercado Spot, preparando los registros necesarios para su procesamiento en SAP.",
+  "funcionalidades": [
+   "Recibir solicitudes, respaldos e instrucciones de pago del Mercado Spot.",
+   "Interpretar y estructurar la información contenida en cada documento.",
+   "Preparar órdenes de compra, documentos de peajes y registros pass-through.",
+   "Preparar documentos asociados a PEC e instrucciones de pago Spot.",
+   "Generar documentos listos para registro en SAP y comunicaciones a terceros involucrados."
+  ]
+ },
+ {
+  "id": 9,
+  "nombre": "Agente de Conciliación de Pagos",
+  "proceso": "ingresos",
+  "descripcion": "Analiza los pagos recibidos y propone su aplicación sobre facturas, identificando excepciones y partidas pendientes.",
+  "funcionalidades": [
+   "Recibir cartolas bancarias, archivos de pago y PAC.",
+   "Identificar pagos mediante RUT, monto y glosa.",
+   "Asociar pagos a facturas potenciales.",
+   "Detectar diferencias y movimientos no identificados.",
+   "Generar propuestas de conciliación y partidas pendientes para Tesorería."
+  ]
+ },
+ {
+  "id": 10,
+  "nombre": "Agente de Cobranza",
+  "proceso": "ingresos",
+  "descripcion": "Monitorea la deuda de los clientes y recomienda acciones de cobranza según el comportamiento de pago y las reglas definidas.",
+  "funcionalidades": [
+   "Recibir información de deuda y partidas abiertas.",
+   "Analizar antigüedad y comportamiento de pago.",
+   "Revisar aplicación de intereses por mora.",
+   "Generar recordatorios de pago y avisos de vencimiento para clientes.",
+   "Recomendar acciones de cobranza y convenios de pago para evaluación del equipo de Cobranza."
+  ]
+ },
+ {
+  "id": 11,
+  "nombre": "Agente de Atención de Requerimientos",
+  "proceso": "ingresos",
+  "descripcion": "Apoya al equipo de Ingresos resolviendo consultas internas relacionadas con facturación, consumos, reliquidaciones y estados de cuenta.",
+  "funcionalidades": [
+   "Recibir requerimientos internos a través de Teams.",
+   "Clasificar y enrutar consultas al responsable correspondiente.",
+   "Consolidar antecedentes de facturación, consumos y cargos asociados.",
+   "Analizar variaciones y causas probables.",
+   "Generar propuestas de respuesta para el equipo de Ingresos."
+  ]
+ },
+ {
+  "id": 12,
+  "nombre": "Agente de Reportería del Ciclo de Ingresos",
+  "proceso": "ingresos",
+  "descripcion": "Consolida información de SAP, BW y Databricks para generar reportería de gestión del ciclo de ingresos, reportería de Clientes Libres y reportes regulatorios requeridos por la CNE y el INE.",
+  "funcionalidades": [
+   "Recibir información desde SAP, BW, Databricks y otras fuentes del proceso.",
+   "Consolidar información por cliente, mercado y período.",
+   "Calcular KPIs de facturación, errores, refacturaciones y morosidad.",
+   "Elaborar reportería de gestión para seguimiento operativo, ingresos y Mesa de Cobranza.",
+   "Generar reportes de Clientes Libres, reportes regulatorios para la CNE e INE, y análisis ejecutivos para la Subgerencia de Gestión de Ingresos.",
+   "Preparar los reportes finales para distribución interna y envío a organismos regulatorios."
+  ]
+ },
+ {
+  "id": 13,
+  "nombre": "Agente de Requerimientos de Compra",
+  "proceso": "compras",
+  "descripcion": "Atiende al usuario de negocio por Teams y lo guía, pregunta a pregunta, hasta asegurar que el requerimiento de compra esté correctamente clasificado, completo y alineado con los estándares de abastecimiento de Colbún, reduciendo reprocesos y desviaciones antes de su procesamiento.",
+  "funcionalidades": [
+   "Atender requerimientos de compra en lenguaje natural por mensaje.",
+   "Preguntar por la información faltante según el tipo de compra.",
+   "Auditar que la información esté completa: cantidad, fecha requerida, centro de costo, activo, presupuesto y antecedentes técnicos.",
+   "Recomendar la categoría de compra, especialidad y estrategia de abastecimiento más adecuada.",
+   "Recomendar materiales, contratos marco, convenios o compras similares ya existentes.",
+   "Detectar errores de imputación, descripciones ambiguas o antecedentes insuficientes.",
+   "Identificar riesgos de reproceso y generar recomendaciones de mejora.",
+   "Emitir una recomendación de calidad del requerimiento para abastecimiento.",
+   "Construir y Digitar SolPed."
+  ]
+ },
+ {
+  "id": 14,
+  "nombre": "Agente de Auditoría y Liberación de SolPed y OC",
+  "proceso": "compras",
+  "descripcion": "Audita con reglas de negocio las SolPed generadas por MRP o el usuario y las OC antes de su liberación. Entrega al aprobador una recomendación fundamentada (La decisión final permanece en el aprobador definido).",
+  "funcionalidades": [
+   "Revisar y Auditar las SolPed generadas tanto por usuario como MRP: ubicación técnica, datos de planificación y parámetros de abastecimiento.",
+   "Auditar que cada Solped tenga la información necesaria, con la calidad requerida.",
+   "Auditar que cada OC tenga sus respaldos: informe de adjudicación, contrato y cotizaciones.",
+   "Detectar posible fraccionamiento de compras.",
+   "Alertar diferencias entre la OC, la adjudicación y el contrato.",
+   "Recomendar la liberación, el bloqueo o la corrección de cada SolPed y OC.",
+   "En caso de bloquear o corregir recomendar mensaje tipo para la gestión."
+  ]
+ },
+ {
+  "id": 15,
+  "nombre": "Agente de Creación Y Depuración de Materiales",
+  "proceso": "compras",
+  "descripcion": "Atiende las solicitudes de creación de materiales y digita en SAP la creación, extensión o modificación correspondiente, utilizando descripciones estándar y evitando duplicados para mantener un maestro confiable.",
+  "funcionalidades": [
+   "Atender solicitudes de creación de materiales.",
+   "Buscar materiales similares y detectar duplicados.",
+   "Revisar y Auditar Maestro de Materiales.",
+   "Recomendar una descripción normalizada. (Joule)",
+   "Digitar la creación, extensión y modificación de materiales en SAP.",
+   "Depurar las descripciones existentes."
+  ]
+ },
+ {
+  "id": 16,
+  "nombre": "Agente de Bases Técnicas y Administrativas",
+  "proceso": "compras",
+  "descripcion": "Asistente conversacional que construye bases técnicas y administrativas para licitaciones, identificando información faltante y generando documentación.",
+  "funcionalidades": [
+   "Atender conversaciones para definir el alcance.",
+   "Evaluar la completitud de la información.",
+   "Identificar y solicitar antecedentes faltantes.",
+   "Recomendar contenido técnico basado en experiencias previas. (Contenido interno de colbún y búsquedas web)",
+   "Incorporar requisitos normativos y corporativos.",
+   "Auditar la consistencia de la documentación.",
+   "Documentar bases técnicas y adminsitrativas para salir al mercado."
+  ]
+ },
+ {
+  "id": 17,
+  "nombre": "Agente de Cuadro de Precios y Pauta de Evaluación",
+  "proceso": "compras",
+  "descripcion": "Diseña antes de publicar la licitación los instrumentos que se aplicarán a las ofertas: el cuadro de precios que completan los proveedores y la pauta de evaluación técnica.",
+  "funcionalidades": [
+   "Construir el cuadro de precios con una partida por cada actividad del alcance.",
+   "Auditar la coherencia entre el alcance, las bases y el cuadro de precios.",
+   "Detectar partidas globales o faltantes.",
+   "Definir modelo de scoring para evaluar proveedores",
+   "Recomendar los criterios de evaluación y su ponderación según la criticidad del proceso.",
+   "Redactar la pauta de evaluación técnica y económica."
+  ]
+ },
+ {
+  "id": 18,
+  "nombre": "Agente de Gestión de Proveedores",
+  "proceso": "compras",
+  "descripcion": "Recomienda proveedores para cada proceso y audita sus antecedentes, reutilizando consultas vigentes para evitar reprocesos y reducir el costo de validaciones externas.",
+  "funcionalidades": [
+   "Recomendar proveedores según el historial de compras y mercado.(SAP Joule)",
+   "Validar, registrar, enriquecer y segmentar proveedores. (SAP Joule)",
+   "Buscar proveedores alternativos en SLP y la web. (SAP Joule)",
+   "Consultar en la web historial del proveedor.",
+   "Redactar la ficha de antecedentes del proveedor.",
+   "Alertar riesgos y hallazgos críticos."
+  ]
+ },
+ {
+  "id": 19,
+  "nombre": "Agente de Gestión del Evento de Licitación",
+  "proceso": "compras",
+  "descripcion": "Asiste la gestión del proceso de licitación en SAP y Ariba, analizando SolPed liberadas, consolidando demanda y preparando eventos de licitación para revisión y aprobación del comprador responsable antes de su publicación.",
+  "funcionalidades": [
+   "Analizar las SolPed liberadas.",
+   "Recomendar consolidaciones de demanda según categoría y especialidad.",
+   "Agrupar las SolPed en procesos de licitación comunes.",
+   "Generar y digitar las peticiones de oferta en SAP. (SAP Joule)",
+   "Preparar eventos de licitación en Ariba para revisión y aprobación del comprador. (SAP Joule)",
+   "Alertar inconsistencias o información faltante antes de publicar.",
+   "Cerrar eventos de licitación.",
+   "Consolidar los antecedentes necesarios para la evaluación de ofertas."
+  ]
+ },
+ {
+  "id": 20,
+  "nombre": "Agente de Comparativo Técnico y Económico de Ofertas",
+  "proceso": "compras",
+  "descripcion": "Aplica el cuadro de precios y la pauta de evaluación a las ofertas recibidas. Homologa la información, identifica desviaciones y recomienda la alternativa más conveniente.",
+  "funcionalidades": [
+   "Extraer los datos de las ofertas y de las cédulas de precio.",
+   "Homologar las ofertas para compararlas en igualdad de condiciones. (SAP Joule)",
+   "Revisar precios y contratos previos para entender el precio en condiciones similares",
+   "Asignar nota técnica en base a modelo de scoring según la pauta de evaluación.",
+   "Construir el comparativo técnico y económico.",
+   "Detectar faltantes, adicionales y desviaciones respecto de lo solicitado.",
+   "Redactar las consultas aclaratorias para los proveedores.",
+   "Recomendar la adjudicación.(SAP Joule)"
+  ]
+ },
+ {
+  "id": 21,
+  "nombre": "Agente de Informe de Adjudicación",
+  "proceso": "compras",
+  "descripcion": "Asistente que formaliza los resultados del proceso de evaluación, consolidando los antecedentes y generando el informe de adjudicación en formato corporativo para su revisión y aprobación.",
+  "funcionalidades": [
+   "Consolidar las evaluaciones y antecedentes del proceso.",
+   "Consolidar los respaldos técnicos, económicos y comerciales.",
+   "Redactar el informe de adjudicación en formato corporativo.",
+   "Documentar la justificación de la decisión de adjudicación definida en la evaluación.",
+   "Auditar la completitud de la documentación de respaldo.",
+   "Auditar el nivel de aprobación requerido según monto.",
+   "Digitar el informe y sus anexos en iDok para revisión y aprobación."
+  ]
+ },
+ {
+  "id": 22,
+  "nombre": "Agente de Contratos",
+  "proceso": "compras",
+  "descripcion": "Asiste la elaboración y revisión de contratos utilizando plantillas corporativas, contratos históricos y estándares legales definidos por Colbún, dejando borradores consistentes y alineados con las políticas corporativas para revisión humana.",
+  "funcionalidades": [
+   "Atender solicitudes contractuales en lenguaje natural por mensaje.",
+   "Buscar contratos históricos similares según categoría, alcance, monto y tipo de servicio.",
+   "Recomendar cláusulas, anexos y condiciones según la categoría contractual.",
+   "Construir borradores de contratos utilizando plantillas corporativas vigentes.",
+   "Redactar adendas, convenios, modificaciones y finiquitos utilizando casos similares anteriores.",
+   "Auditar desviaciones respecto de las plantillas corporativas y estándares contractuales.",
+   "Detectar cláusulas faltantes, inconsistencias o riesgos contractuales.",
+   "Generar un informe de observaciones y recomendaciones para revisión legal.",
+   "Digitar el borrador contractual y sus anexos para revisión y aprobación."
+  ]
+ },
+ {
+  "id": 23,
+  "nombre": "Agente de Digitación de Pedido Abierto y OC",
+  "proceso": "compras",
+  "descripcion": "Lee el contrato firmado y el informe de adjudicación, ingresa en SAP el Pedido Abierto o la Orden de Compra y le adjunta los respaldos. Deja el pedido listo para su liberación.",
+  "funcionalidades": [
+   "Extraer los datos del contrato firmado y del informe de adjudicación.",
+   "Digitar el Pedido Abierto o la OC en SAP.",
+   "Adjuntar al pedido el informe de adjudicación, el contrato y las adendas.",
+   "Auditar que el pedido coincida con el contrato antes de dejarlo para liberación.",
+   "Archivar los documentos firmados en CASE con nombre estándar y sin duplicados."
+  ]
+ },
+ {
+  "id": 24,
+  "nombre": "Agente de Seguimiento de Requerimientos",
+  "proceso": "compras",
+  "descripcion": "Responde por Teams en qué etapa está cada compra, quién tiene la tarea pendiente y desde cuándo, mostrando únicamente la información que cada usuario tiene permiso para consultar.",
+  "funcionalidades": [
+   "Responder consultas de estado por Teams.",
+   "Consultar la etapa del requerimiento en SAP y Ariba.",
+   "Informar quién tiene la tarea pendiente y hace cuánto tiempo.",
+   "Auditar los permisos del usuario antes de responder.",
+   "Alertar requerimientos detenidos."
+  ]
+ },
+ {
+  "id": 25,
+  "nombre": "Agente de Soporte a Usuarios",
+  "proceso": "compras",
+  "descripcion": "Es el punto único de atención para las dudas sobre el proceso de compras. Responde consultas frecuentes sobre solicitudes, licitaciones, contratos y materiales, guía al usuario en los sistemas y deriva a un especialista los casos complejos.",
+  "funcionalidades": [
+   "Responder consultas de proceso por mensajes.",
+   "Responder dudas frecuentes de sourcing: etapas de la licitación, plazos, documentos requeridos y criterios de evaluación.",
+   "Responder dudas sobre solicitudes de compra, contratos y materiales.",
+   "Guiar paso a paso las transacciones en SAP, Ariba y Concur.",
+   "Derivar los casos complejos a un especialista."
+  ]
+ },
+ {
+  "id": 26,
+  "nombre": "Identificador de patrones en llamadas CEN",
+  "proceso": "despachos",
+  "descripcion": "Analiza las comunicaciones (llamadas grabadas) entre el CEN y el Centro de Coordinación para convertir las grabaciones en información operacional estructurada. Permite identificar instrucciones, eventos y patrones recurrentes, facilitando el análisis de la gestión del despacho y el aprovechamiento de información que actualmente queda contenida en las llamadas.",
+  "funcionalidades": [
+   "Guarda y transcribe las grabaciones disponibles del Centro de Coordinación",
+   "Identifica instalación, unidad, horario, contraparte, instrucción y acción requerida",
+   "Clasifica las comunicaciones por tipo de evento",
+   "Agrupa las llamadas relacionadas con una misma situación",
+   "Identifica instrucciones recurrentes, modificadas o revertidas",
+   "Aplica reglas definidas por Colbún para clasificar situaciones operacionales (identificación de situaciones no previstas o planificadas)",
+   "Entrega una bitácora consultable, análisis de patrones y resúmenes de turno"
+  ]
+ },
+ {
+  "id": 27,
+  "nombre": "Agente revisor de Balances",
+  "proceso": "despachos",
+  "descripcion": "Realiza el cálculo y la comparación mensual de los cuatro balances publicados por el CEN: energía, potencia, Servicios Complementarios y costos distintos. Contrasta sus resultados con los cálculos y antecedentes de Colbún, identifica diferencias relevantes y prepara el análisis necesario para sustentar observaciones ante el CEN.",
+  "funcionalidades": [
+   "Obtiene y valida las medidas de generación, consumos libres y contratos",
+   "Ejecuta los cálculos internos con las reglas y desarrollos definidos",
+   "Descarga los balances preliminares, definitivos y las reliquidaciones del CEN",
+   "Compara cada balance con los cálculos de Colbún",
+   "Revisa costos marginales e inyecciones en energía, potencia reconocida, SSCC valorizados y pagos laterales",
+   "Detecta y prioriza diferencias según su impacto económico",
+   "Genera una memoria con valor CEN, valor Colbún, diferencia y posible causa",
+   "Mantiene trazabilidad de las observaciones, respuestas y correcciones",
+   "Entrega análisis completos para validación del especialista"
+  ]
+ },
+ {
+  "id": 28,
+  "nombre": "Agente de Apoyo a la Planificación",
+  "proceso": "despachos",
+  "descripcion": "Apoya la planificación de corto y mediano plazo mediante la consolidación de antecedentes operacionales y el análisis de los resultados de PLP y PLEXOS. Compara los escenarios de Colbún con los programas publicados por el CEN para identificar diferencias, impactos y posibles observaciones, manteniendo la decisión final en el planificador.",
+  "funcionalidades": [
+   "Reúne información de hidrología, cotas, combustibles, mantenimientos, disponibilidad y restricciones",
+   "Obtiene los programas semanal, diario e intradiario publicados por el CEN",
+   "Procesa los resultados disponibles de PLP y PLEXOS",
+   "Compara los escenarios de Colbún con los programas del CEN",
+   "Revisa si los antecedentes enviados por Colbún fueron incorporados correctamente",
+   "Identifica diferencias y posibles impactos operacionales"
+  ]
+ },
+ {
+  "id": 29,
+  "nombre": "Copiloto del Operador",
+  "proceso": "despachos",
+  "descripcion": "Apoya al operador durante la operación en tiempo real, utilizando el contexto actual y el histórico de decisiones operacionales. Busca situaciones similares, recupera las acciones adoptadas y sus resultados, y recomienda alternativas para abordar el evento en curso, sin reemplazar la decisión del operador.",
+  "funcionalidades": [
+   "Lee el programa diario y la información operacional disponible en SCADA, sin intervenir en la operación",
+   "Detecta desviaciones respecto del programa según criterios definidos por Colbún",
+   "Busca situaciones similares en el histórico de decisiones y eventos operacionales",
+   "Recupera las acciones tomadas anteriormente y sus resultados",
+   "Recibe consultas del operador sobre la situación en curso",
+   "Recomienda alternativas basadas en decisiones pasadas y en el contexto operacional actual",
+   "Entrega alertas, antecedentes y recomendaciones en tiempo real; el operador mantiene la decisión final"
+  ]
+ },
+ {
+  "id": 30,
+  "nombre": "Agente de Declaraciones y combustibles al CEN",
+  "proceso": "despachos",
+  "descripcion": "Prepara y controla los antecedentes que Colbún debe entregar al CEN para la programación de la operación. Consolida información proveniente de las áreas responsables, completa los formatos requeridos y ejecuta validaciones básicas para reducir errores y dejar los archivos listos para revisión y envío.",
+  "funcionalidades": [
+   "Reúne información de costos, disponibilidad y stock de combustibles",
+   "Completa las declaraciones de costos variables, partida y detención",
+   "Revisa la consistencia de los antecedentes entregados por las áreas responsables",
+   "Prepara nominaciones de gas según reglas definidas por Colbún",
+   "Completa los formatos de ofertas de Servicios Complementarios",
+   "Controla formatos, campos obligatorios y plazos",
+   "Entrega los archivos listos para validación y envío por el ingeniero de Programación"
+  ]
+ },
+ {
+  "id": 31,
+  "nombre": "Agente de Reportería diaria",
+  "proceso": "despachos",
+  "descripcion": "Consolida y valida información operacional para preparar la reportería diaria y periódica del área. Aprovecha los cálculos e indicadores existentes, actualiza los reportes y destaca los principales eventos y desviaciones para facilitar su revisión por la jefatura.",
+  "funcionalidades": [
+   "Obtiene datos disponibles desde SCADA, SICOP, Databricks y QlikView",
+   "Ejecuta controles de coherencia y completitud",
+   "Reutiliza los cálculos e indicadores existentes",
+   "Actualiza tablas, gráficos y comentarios",
+   "Identifica eventos y desviaciones relevantes",
+   "Prepara el Informe Diario de Margen y los reportes periódicos de gestión",
+   "Entrega los borradores de informes y sus principales alertas para revisión de la jefatura"
+  ]
+ },
+ {
+  "id": 32,
+  "nombre": "Agente consolidador de información CEN",
+  "proceso": "despachos",
+  "descripcion": "Agente transversal que monitorea, descarga, clasifica y consolida información publicada por el CEN, convirtiéndola en una fuente estructurada y trazable para los procesos de planificación, programación, coordinación operacional, balances y reportería de Colbún. la información buscada es del tipo información técnica, proyectos, estudios, políticas de operación, programas, balances y otros antecedentes desde las plataformas del Coordinador",
+  "funcionalidades": [
+   "Monitorear publicaciones y actualizaciones del CEN.",
+   "Descargar automáticamente información y documentos.",
+   "Homologar formatos y estructuras de datos.",
+   "Consolidar información operacional, regulatoria y comercial.",
+   "Controlar versiones y cambios de publicaciones.",
+   "Distribuir información a otros agentes especializados.",
+   "Generar repositorios y datasets listos para análisis."
+  ]
+ },
+ {
+  "id": 33,
+  "nombre": "Agente recomendador de trabajos internos o externos",
+  "proceso": "acreditacion",
+  "descripcion": "Analiza las características y la planificación general de mantenimientos, considerando restricciones técnicas y de tiempo para recomendar si su ejecución debiera abordarse con capacidades internas o mediante un proveedor externo.",
+  "funcionalidades": [
+   "Analizar el alcance y características del trabajo solicitado.",
+   "Identificar capacidades y especialidades requeridas.",
+   "Recomendar ejecución interna o contratación externa.",
+   "Detectar antecedentes faltantes para tomar la decisión.",
+   "Entregar criterios que sustenten la recomendación.",
+   "Identificar requerimientos de acceso y acreditación asociados."
+  ]
+ },
+ {
+  "id": 34,
+  "nombre": "Agente conversacional para Proveedores",
+  "proceso": "acreditacion",
+  "descripcion": "Asistente conversacional que acompaña y guía al proveedor durante el proceso de acreditación de la empresa y sus trabajadores para ingresar y realizar trabajos en las instalaciones, orientándolo sobre requisitos, documentación, observaciones y acciones pendientes hasta lograr su habilitación de acceso.",
+  "funcionalidades": [
+   "Guiar al proveedor paso a paso durante su proceso de acreditación.",
+   "Informar los requisitos y antecedentes requeridos para la habilitación de la empresa y sus trabajadores.",
+   "Comunicar documentos faltantes, vencidos, inconsistencias u observaciones identificadas durante las revisiones.",
+   "Informar el estado de habilitación de acceso a la instalación y los permisos de trabajo.",
+   "Resolver consultas frecuentes y derivar excepciones o casos que requieran revisión especializada al responsable correspondiente."
+  ]
+ },
+ {
+  "id": 35,
+  "nombre": "Agente revisor de información de proveedores (Info. Crítica)",
+  "proceso": "acreditacion",
+  "descripcion": "Revisa documentación y antecedentes críticos del proveedor, poniendo foco en información que puede condicionar su habilitación o generar riesgos para el actuar en terreno (Procedimientos de trabajo, acreditaciones u otros)",
+  "funcionalidades": [
+   "Revisar documentación crítica presentada por el proveedor (Plan de trabajo, acreditaciones)",
+   "Validar vigencia, integridad y consistencia de antecedentes.",
+   "Contrastar información entre documentos y registros disponibles.",
+   "Identificar documentos vencidos, ausentes o inconsistentes.",
+   "Detectar condiciones que requieran revisión especializada.",
+   "Generar observaciones y alertas para el responsable."
+  ]
+ },
+ {
+  "id": 36,
+  "nombre": "Agente revisor de información de proveedores (Info. básica)",
+  "proceso": "acreditacion",
+  "descripcion": "Automatiza la revisión inicial y administrativa de los antecedentes básicos requeridos para registrar y mantener habilitado a un proveedor (Documentos de identificación mínimos, identificación de equipo de trabajo y roles)",
+  "funcionalidades": [
+   "Verificar presencia de documentación obligatoria.",
+   "Revisar completitud de campos y antecedentes.",
+   "Validar formatos y vigencias documentales.",
+   "Detectar información faltante o inconsistente.",
+   "Clasificar documentos y antecedentes recibidos.",
+   "Solicitar o proponer subsanaciones cuando corresponda.",
+   "Generar observaciones y alertas para el responsable."
+  ]
+ },
+ {
+  "id": 37,
+  "nombre": "Agente revisor de Permisos de trabajo",
+  "proceso": "acreditacion",
+  "descripcion": "Apoya la revisión del Permiso de Trabajo y de sus antecedentes asociados, identificando inconsistencias o requisitos pendientes antes de su aprobación.",
+  "funcionalidades": [
+   "Revisar información contenida en el Permiso de Trabajo.",
+   "Validar completitud de antecedentes requeridos.",
+   "Contrastar el PT con el alcance del trabajo.",
+   "Revisar consistencia con procedimientos y documentación asociada.",
+   "Identificar requisitos, documentos o aprobaciones pendientes.",
+   "Generar observaciones para revisión del responsable.",
+   "Mantener trazabilidad del estado y de las observaciones del PT."
+  ]
+ },
+ {
+  "id": 38,
+  "nombre": "Agente Orquestador de Gestión de Proveedores",
+  "proceso": "acreditacion",
+  "descripcion": "Actúa como agente coordinador del proceso end-to-end, monitoreando el avance del proveedor y articulando las revisiones ejecutadas por los distintos agentes especializados.",
+  "funcionalidades": [
+   "Monitorear el estado integral del proceso del proveedor.",
+   "Coordinar la intervención de los agentes revisores.",
+   "Consolidar resultados de las distintas validaciones.",
+   "Identificar pendientes, bloqueos y excepciones del proceso.",
+   "Gestionar alertas y notificaciones a responsables.",
+   "Entregar trazabilidad y estado consolidado de cada proveedor."
+  ]
+ }
+]</script>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   CONFIGURACIÓN
+   ===================================================================== */
+
+/* Campos editables de cada tarjeta.
+   Para agregar un campo nuevo basta con sumarlo a este arreglo: se refleja
+   automáticamente en la tarjeta, en la persistencia (localStorage), en el
+   indicador de avance (si obligatorio) y como columna en el Excel.
+   tipo: "textarea" | "text" | "number" | "select" (requiere opciones: [...]) */
+const CAMPOS = [
+  { clave: "decision", etiqueta: "Decisión", tipo: "select", obligatorio: true,
+    opciones: ["Priorizar", "Neutral", "Descartar"], anchoExcel: 14 },
+  { clave: "justificacion", etiqueta: "Justificación", tipo: "textarea", obligatorio: true,
+    placeholder: "¿Por qué este agente está en esta posición?", anchoExcel: 80 }
+  // Ejemplo: { clave: "comentario", etiqueta: "Comentario", tipo: "text", obligatorio: false, anchoExcel: 40 },
+  // Ejemplo: { clave: "plazo", etiqueta: "Plazo esperado", tipo: "select", obligatorio: false, opciones: ["Corto","Mediano","Largo"], anchoExcel: 18 }
+];
+
+/* Texto del indicador de avance */
+const TEXTO_AVANCE = (n, total) => `${n} de ${total} agentes completos`;
+
+const PROCESOS = [
+  { clave: "ingresos",     nombre: "Ciclo de Ingresos",                      color: "#FF8033", texto: "#FFFFFF", soft: "#FFF1E8" },
+  { clave: "compras",      nombre: "Ciclo de Compras",                       color: "#00B0E6", texto: "#FFFFFF", soft: "#E6F7FD" },
+  { clave: "despachos",    nombre: "Proceso de Despachos",                   color: "#8DBB30", texto: "#FFFFFF", soft: "#F2F8E6" },
+  { clave: "acreditacion", nombre: "Proceso de Acreditación de proveedores", color: "#FFCC00", texto: "#000000", soft: "#FFF9DB" }
+];
+
+const STORAGE_KEY = "colbun_priorizacion_agentes_v1";
+
+function esEmailValido(email) {
+  return true;
+}
+
+/* =====================================================================
+   DATOS Y ESTADO
+   ===================================================================== */
+const AGENTES = JSON.parse(document.getElementById("data-agentes").textContent);
+const porId = new Map(AGENTES.map(a => [a.id, a]));
+const procPorClave = new Map(PROCESOS.map(p => [p.clave, p]));
+const agentesDe = clave => AGENTES.filter(a => a.proceso === clave).sort((a,b) => a.id - b.id);
+
+let estado = cargar();
+
+function estadoInicialProceso(clave){
+  return { orden: agentesDe(clave).map(a => a.id), valores: {} };
+}
+function cargar(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
+  if (!s || typeof s !== "object") s = {};
+  s.procesos = s.procesos || {};
+  PROCESOS.forEach(p => {
+    const base = estadoInicialProceso(p.clave);
+    const st = s.procesos[p.clave];
+    if (!st || !Array.isArray(st.orden)) { s.procesos[p.clave] = base; return; }
+    // Sanea: conserva el orden guardado, descarta IDs inexistentes y agrega faltantes al final.
+    const validos = new Set(base.orden);
+    const orden = st.orden.filter(id => validos.has(id));
+    base.orden.forEach(id => { if (!orden.includes(id)) orden.push(id); });
+    st.orden = orden; st.valores = st.valores || {};
+  });
+  s.email = typeof s.email === 'string' ? s.email : '';
+  if (s.activo && !procPorClave.has(s.activo)) s.activo = null;
+  return s;
+}
+let saveTimer;
+function guardar(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); } catch(e) {}
+  const m = document.getElementById("savedMsg");
+  m.classList.add("show"); clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => m.classList.remove("show"), 1200);
+}
+const est = () => estado.procesos[estado.activo];
+const valor = (id, clave) => ((est().valores[id] || {})[clave] ?? "");
+const lleno = v => String(v ?? "").trim() !== "";
+const camposOblig = CAMPOS.filter(c => c.obligatorio);
+const agenteCompleto = (st, id) => camposOblig.every(c => lleno((st.valores[id] || {})[c.clave]));
+function tieneAvance(clave){
+  const st = estado.procesos[clave], base = estadoInicialProceso(clave).orden;
+  const movido = st.orden.some((id, i) => id !== base[i]);
+  const conTexto = Object.values(st.valores).some(v => Object.values(v || {}).some(lleno));
+  return movido || conTexto;
+}
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function aplicarColor(p){
+  const r = document.documentElement.style;
+  r.setProperty("--acc", p ? p.color : "#0E2233");
+  r.setProperty("--acc-ink", p ? p.texto : "#FFFFFF");
+  r.setProperty("--acc-soft", p ? p.soft : "#EEF1F4");
+  // en amarillo, los bullets se ven mejor en un tono más oscuro
+  r.setProperty("--acc-mark", p && p.clave === "acreditacion" ? "#B38F00" : (p ? p.color : "#0E2233"));
+}
+function confirmar({titulo, texto, lista = [], ok = "Aceptar", cancelar = "Cancelar"}){
+  return new Promise(res => {
+    $("mTitle").textContent = titulo; $("mText").textContent = texto;
+    $("mList").innerHTML = lista.map(x => `<li>${esc(x)}</li>`).join("");
+    $("mList").classList.toggle("hidden", !lista.length);
+    $("mOk").textContent = ok; $("mCancel").textContent = cancelar;
+    const w = $("modalWrap"); w.classList.add("open"); $("mOk").focus();
+    const fin = v => { w.classList.remove("open"); $("mOk").onclick = $("mCancel").onclick = null; document.removeEventListener("keydown", key); res(v); };
+    const key = e => { if (e.key === "Escape") fin(false); };
+    $("mOk").onclick = () => fin(true); $("mCancel").onclick = () => fin(false);
+    document.addEventListener("keydown", key);
+  });
+}
+
+/* =====================================================================
+   PANTALLA DE SELECCIÓN
+   ===================================================================== */
+function renderSeleccion(){
+  aplicarColor(null);
+  $("procGrid").innerHTML = PROCESOS.map(p => {
+    const n = agentesDe(p.clave).length;
+    const st = estado.procesos[p.clave];
+    const just = st.orden.filter(id => agenteCompleto(st, id)).length;
+    const status = tieneAvance(p.clave) ? `En curso · ${TEXTO_AVANCE(just, n)}` : "Sin iniciar";
+    return `<button class="proc-card" type="button" data-proc="${p.clave}" style="background:${p.color};color:${p.texto}">
+      <span class="pname">${esc(p.nombre)}</span>
+      <span class="pstatus">${esc(status)}</span>
+      <span class="pcount">${n}<small>agentes</small></span>
+    </button>`;
+  }).join("");
+  $("viewSelect").classList.remove("hidden"); $("viewRank").classList.add("hidden");
+}
+$("procGrid").addEventListener("click", e => {
+  const b = e.target.closest("[data-proc]"); if (!b) return;
+  estado.activo = b.dataset.proc; guardar(); renderRanking();
+});
+
+/* =====================================================================
+   PANTALLA DE RANKING
+   ===================================================================== */
+const ICON_GRIP = '<svg width="16" height="22" viewBox="0 0 16 22" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="11" cy="5" r="2"/><circle cx="5" cy="11" r="2"/><circle cx="11" cy="11" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="11" cy="17" r="2"/></svg>';
+
+function sincronizarEmailInput(){
+  const input = document.getElementById('respondentEmail');
+  if (!input) return;
+  input.value = estado.email || '';
+  input.classList.toggle('invalid', Boolean(estado.email) && !esEmailValido(estado.email));
+  input.addEventListener('input', (event) => {
+    estado.email = String(event.target.value || '').trim();
+    input.classList.toggle('invalid', Boolean(estado.email) && !esEmailValido(estado.email));
+    guardar();
+  });
+}
+
+function htmlCampo(c, id){
+  const v = valor(id, c.clave), name = `${c.clave}-${id}`;
+  const req = c.obligatorio ? ' <span class="req" aria-hidden="true">*</span>' : "";
+  const attrs = `id="${name}" data-campo="${c.clave}" data-id="${id}" ${c.obligatorio ? 'aria-required="true"' : ""}`;
+  let ctrl;
+  if (c.tipo === "textarea") ctrl = `<textarea ${attrs} placeholder="${esc(c.placeholder || "")}">${esc(v)}</textarea>`;
+  else if (c.tipo === "select") ctrl = `<select ${attrs} data-valor="${esc(v)}"><option value="">Selecciona…</option>${(c.opciones || []).map(o => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  else ctrl = `<input type="${c.tipo === "number" ? "number" : "text"}" ${attrs} value="${esc(v)}" placeholder="${esc(c.placeholder || "")}">`;
+  return `<div class="field${lleno(v) ? " ok" : ""}"><label for="${name}">${esc(c.etiqueta)}${req}</label>${ctrl}</div>`;
+}
+
+function renderRanking(focus){
+  const p = procPorClave.get(estado.activo); aplicarColor(p);
+  $("procPill").textContent = p.nombre;
+  const emailInput = document.getElementById("respondentEmail");
+  if (emailInput) {
+    emailInput.value = estado.email || "";
+    emailInput.classList.toggle("invalid", !esEmailValido(estado.email));
+  }
+  const orden = est().orden, total = orden.length;
+  $("list").innerHTML = orden.map((id, i) => {
+    const a = porId.get(id);
+    return `<li class="card" data-id="${id}">
+      <button class="handle" type="button" aria-label="Arrastrar ${esc(a.nombre)}" title="Arrastrar para mover">${ICON_GRIP}</button>
+      <div class="pos" aria-label="Posición ${i+1}">${i+1}</div>
+      <div class="meta">
+        <span class="idchip">ID ${id}</span>
+        <button class="agent-name" type="button" data-ficha="${id}" title="Ver ficha">${esc(a.nombre)}<span class="eye">Ver ficha</span></button>
+      </div>
+      <div class="fields">${CAMPOS.map(c => htmlCampo(c, id)).join("")}</div>
+      <div class="moves">
+        <button class="mv" type="button" data-move="-1" data-id="${id}" aria-label="Subir ${esc(a.nombre)}" ${i === 0 ? "disabled" : ""}>▲</button>
+        <button class="mv" type="button" data-move="1" data-id="${id}" aria-label="Bajar ${esc(a.nombre)}" ${i === total-1 ? "disabled" : ""}>▼</button>
+      </div>
+    </li>`;
+  }).join("");
+  actualizarAvance();
+  $("viewSelect").classList.add("hidden"); $("viewRank").classList.remove("hidden");
+  if (focus) {
+    const card = $("list").querySelector(`.card[data-id="${focus.id}"]`);
+    if (card) {
+      card.classList.add("flash");
+      const btn = focus.dir && card.querySelector(`[data-move="${focus.dir}"]`);
+      (btn && !btn.disabled ? btn : card.querySelector(".handle")).focus({preventScroll:true});
+      card.scrollIntoView({block:"nearest", behavior:"smooth"});
+    }
+  }
+}
+function actualizarAvance(){
+  const st = est(), total = st.orden.length;
+  const n = st.orden.filter(id => agenteCompleto(st, id)).length;
+  $("progressText").textContent = TEXTO_AVANCE(n, total);
+  $("progressBar").style.width = (total ? (n/total*100) : 0) + "%";
+}
+function mover(id, nuevaPos){
+  const o = est().orden, i = o.indexOf(id);
+  if (i < 0 || nuevaPos < 0 || nuevaPos >= o.length || nuevaPos === i) return false;
+  o.splice(i, 1); o.splice(nuevaPos, 0, id); guardar();
+  $("live").textContent = `${porId.get(id).nombre}: posición ${nuevaPos+1}`;
+  return true;
+}
+
+$("list").addEventListener("click", e => {
+  const mv = e.target.closest("[data-move]");
+  if (mv) {
+    const id = +mv.dataset.id, d = +mv.dataset.move;
+    if (mover(id, est().orden.indexOf(id) + d)) renderRanking({id, dir: d});
+    return;
+  }
+  const f = e.target.closest("[data-ficha]");
+  if (f) abrirFicha(+f.dataset.ficha);
+});
+function onCampo(e){
+  const el = e.target.closest("[data-campo]"); if (!el) return;
+  const id = +el.dataset.id, st = est();
+  st.valores[id] = st.valores[id] || {};
+  st.valores[id][el.dataset.campo] = el.value;
+  el.closest(".field").classList.toggle("ok", lleno(el.value));
+  if (el.tagName === "SELECT") el.dataset.valor = el.value;
+  actualizarAvance(); guardar();
+}
+$("list").addEventListener("input", onCampo);
+$("list").addEventListener("change", onCampo);
+/* Atajo de teclado en el asa: flechas arriba/abajo mueven la tarjeta */
+$("list").addEventListener("keydown", e => {
+  const h = e.target.closest(".handle"); if (!h || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const id = +h.closest(".card").dataset.id, d = e.key === "ArrowUp" ? -1 : 1;
+  if (mover(id, est().orden.indexOf(id) + d)) renderRanking({id});
+});
+
+/* ---------- Arrastrar y soltar (Pointer Events: mouse, lápiz y táctil) ---------- */
+(function initDrag(){
+  let drag = null;
+  $("list").addEventListener("pointerdown", e => {
+    const h = e.target.closest(".handle"); if (!h || e.button > 0) return;
+    e.preventDefault();
+    const card = h.closest(".card"), r = card.getBoundingClientRect();
+    const ph = document.createElement("li"); ph.className = "placeholder"; ph.style.height = r.height + "px";
+    card.parentNode.insertBefore(ph, card);
+    Object.assign(card.style, {width: r.width + "px", left: r.left + "px", top: r.top + "px"});
+    card.classList.add("dragging"); document.body.classList.add("is-dragging");
+    drag = {card, ph, id: +card.dataset.id, dy: e.clientY - r.top, pid: e.pointerId};
+    h.setPointerCapture && h.setPointerCapture(e.pointerId);
+  });
+  window.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    drag.card.style.top = (e.clientY - drag.dy) + "px";
+    const cards = [...$("list").querySelectorAll(".card:not(.dragging)")];
+    let antes = null;
+    for (const c of cards) { const r = c.getBoundingClientRect(); if (e.clientY < r.top + r.height/2) { antes = c; break; } }
+    if (antes) $("list").insertBefore(drag.ph, antes); else $("list").appendChild(drag.ph);
+    // auto-scroll cerca de los bordes
+    const m = 70; if (e.clientY < m) window.scrollBy(0, -14); else if (e.clientY > innerHeight - m) window.scrollBy(0, 14);
+  });
+  function fin(e){
+    if (!drag || (e && e.pointerId !== drag.pid)) return;
+    const items = [...$("list").children].filter(x => x !== drag.card);
+    const nueva = items.indexOf(drag.ph);
+    drag.card.classList.remove("dragging"); drag.card.removeAttribute("style");
+    drag.ph.remove(); document.body.classList.remove("is-dragging");
+    const id = drag.id; drag = null;
+    mover(id, nueva); renderRanking({id});
+  }
+  window.addEventListener("pointerup", fin);
+  window.addEventListener("pointercancel", fin);
+})();
+
+/* ---------- Acciones ---------- */
+$("btnChange").addEventListener("click", async () => {
+  if (tieneAvance(estado.activo)) {
+    const ok = await confirmar({ titulo: "¿Cambiar de proceso?",
+      texto: "Tu avance en este proceso queda guardado y podrás retomarlo.", ok: "Cambiar proceso" });
+    if (!ok) return;
+  }
+  cerrarFicha(); estado.activo = null; guardar(); renderSeleccion(); window.scrollTo(0,0);
+});
+$("btnReset").addEventListener("click", async () => {
+  const p = procPorClave.get(estado.activo);
+  const ok = await confirmar({ titulo: "¿Restablecer?",
+    texto: `Se volverá al orden inicial y se borrarán las justificaciones y decisiones de ${p.nombre}. Esta acción no se puede deshacer.`, ok: "Restablecer" });
+  if (!ok) return;
+  estado.procesos[estado.activo] = estadoInicialProceso(estado.activo); guardar(); renderRanking();
+});
+async function guardarEnBaseDatos(){
+  const emailInput = document.getElementById('respondentEmail');
+  const email = String((emailInput ? emailInput.value : estado.email) || '').trim();
+  if (!esEmailValido(email)) {
+    const ok = await confirmar({
+      titulo: 'Email obligatorio',
+      texto: 'Debes ingresar un email válido antes de guardar la respuesta.',
+      ok: 'Aceptar',
+      cancelar: 'Cerrar'
+    });
+    if (ok) {
+      const input = document.getElementById('respondentEmail');
+      if (input) {
+        input.focus();
+        input.classList.add('invalid');
+        setTimeout(() => input.classList.remove('invalid'), 1000);
+      }
+    }
+    return;
+  }
+
+  const st = est();
+  const pend = st.orden.filter(id => !agenteCompleto(st, id));
+  if (pend.length) {
+    const falta = id => { const f = camposOblig.filter(c => !lleno((st.valores[id] || {})[c.clave])).map(c => c.etiqueta.toLowerCase());
+      return f.length > 1 ? f.slice(0, -1).join(", ") + " y " + f[f.length-1] : f[0]; };
+    const ok = await confirmar({ titulo: `${pend.length} agente${pend.length > 1 ? "s" : ""} incompleto${pend.length > 1 ? "s" : ""}`,
+      texto: "¿Quieres guardar de todas formas?",
+      lista: pend.map(id => `#${st.orden.indexOf(id)+1} · ${porId.get(id).nombre}: falta ${falta(id)}`), ok: "Guardar igual" });
+    if (!ok) return;
+  }
+
+  const records = st.orden.map((id, index) => ({
+    agent_id: id,
+    agent_name: porId.get(id).nombre,
+    process_key: estado.activo,
+    posicion: index + 1,
+    decision: (st.valores[id] || {}).decision || "",
+    justificacion: (st.valores[id] || {}).justificacion || "",
+    respondent_email: email,
+    raw_data: {
+      id: id,
+      nombre: porId.get(id).nombre,
+      posicion: index + 1,
+      decision: (st.valores[id] || {}).decision || "",
+      justificacion: (st.valores[id] || {}).justificacion || "",
+      respondent_email: email
+    }
+  }));
+
+  try {
+    const res = await fetch(`/api/procesos/${estado.activo}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ respondent_email: email, records })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "No se pudo guardar");
+    await confirmar({
+      titulo: "Datos guardados",
+      texto: `${data.count || records.length} registros enviados al proceso ${procPorClave.get(estado.activo).nombre}.`,
+      ok: "Aceptar",
+      cancelar: "Cerrar"
+    });
+  } catch (error) {
+    await confirmar({
+      titulo: "Error al guardar",
+      texto: error.message || "Error inesperado al guardar en PostgreSQL.",
+      ok: "Aceptar",
+      cancelar: "Cerrar"
+    });
+  }
+}
+$("btnSaveDb").addEventListener("click", guardarEnBaseDatos);
+$("btnDownload").addEventListener("click", async () => {
+  const st = est();
+  const pend = st.orden.filter(id => !agenteCompleto(st, id));
+  if (pend.length) {
+    const falta = id => { const f = camposOblig.filter(c => !lleno((st.valores[id] || {})[c.clave])).map(c => c.etiqueta.toLowerCase());
+      return f.length > 1 ? f.slice(0, -1).join(", ") + " y " + f[f.length-1] : f[0]; };
+    const ok = await confirmar({ titulo: `${pend.length} agente${pend.length > 1 ? "s" : ""} incompleto${pend.length > 1 ? "s" : ""}`,
+      texto: "¿Quieres descargar de todas formas?",
+      lista: pend.map(id => `#${st.orden.indexOf(id)+1} · ${porId.get(id).nombre}: falta ${falta(id)}`), ok: "Descargar igual" });
+    if (!ok) return;
+  }
+  descargarExcel();
+});
+
+/* =====================================================================
+   FICHA DEL AGENTE (panel lateral)
+   ===================================================================== */
+let fichaId = null;
+function abrirFicha(id){
+  fichaId = id; pintarFicha();
+  $("panel").classList.add("open"); $("overlay").classList.add("open"); $("panel").setAttribute("aria-hidden","false");
+  $("pClose").focus();
+}
+function pintarFicha(){
+  const a = porId.get(fichaId), o = est().orden, i = o.indexOf(fichaId);
+  $("pProc").textContent = procPorClave.get(a.proceso).nombre;
+  $("pId").textContent = `ID ${a.id} · Posición ${i+1}`;
+  $("pTitle").textContent = a.nombre;
+  $("pDesc").textContent = a.descripcion;
+  $("pFun").innerHTML = a.funcionalidades.map(f => `<li>${esc(f)}</li>`).join("");
+  $("pCounter").textContent = `${i+1} de ${o.length}`;
+  $("pPrev").disabled = i === 0; $("pNext").disabled = i === o.length - 1;
+  document.querySelector(".panel-body").scrollTop = 0;
+}
+function cerrarFicha(){
+  if (!$("panel").classList.contains("open")) return;
+  $("panel").classList.remove("open"); $("overlay").classList.remove("open"); $("panel").setAttribute("aria-hidden","true");
+  const b = document.querySelector(`[data-ficha="${fichaId}"]`); if (b) b.focus({preventScroll:true});
+}
+function pasoFicha(d){ const o = est().orden, i = o.indexOf(fichaId) + d; if (i >= 0 && i < o.length) { fichaId = o[i]; pintarFicha(); } }
+$("pClose").addEventListener("click", cerrarFicha);
+$("overlay").addEventListener("click", cerrarFicha);
+$("pPrev").addEventListener("click", () => pasoFicha(-1));
+$("pNext").addEventListener("click", () => pasoFicha(1));
+document.addEventListener("keydown", e => {
+  if (!$("panel").classList.contains("open") || $("modalWrap").classList.contains("open")) return;
+  if (e.key === "Escape") cerrarFicha();
+  else if (e.key === "ArrowLeft") pasoFicha(-1);
+  else if (e.key === "ArrowRight") pasoFicha(1);
+});
+
+/* =====================================================================
+   EXPORTACIÓN A EXCEL (.xlsx nativo, sin librerías externas)
+   ===================================================================== */
+function construirFilas(clave){
+  const st = estado.procesos[clave];
+  const columnas = [
+    { etiqueta: "Posición", ancho: 10 }, { etiqueta: "ID", ancho: 7 }, { etiqueta: "Nombre Agente", ancho: 55 },
+    ...CAMPOS.map(c => ({ etiqueta: c.etiqueta, ancho: c.anchoExcel || 40 }))
+  ];
+  const filas = st.orden.map((id, i) => [
+    i + 1, id, porId.get(id).nombre,
+    ...CAMPOS.map(c => { const v = (st.valores[id] || {})[c.clave] ?? ""; return (c.tipo === "number" && lleno(v) && !isNaN(+v)) ? +v : String(v); })
+  ]);
+  return { columnas, filas };
+}
+function descargarExcel(){
+  const p = procPorClave.get(estado.activo);
+  const { columnas, filas } = construirFilas(estado.activo);
+  const bytes = XLSX.crear("Ranking", columnas, filas);
+  const d = new Date(), f = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const nombreProc = p.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob), link = document.createElement("a");
+  link.href = url; link.download = `Ranking_Agentes_${nombreProc}_${f}.xlsx`;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* Generador XLSX mínimo: ZIP sin compresión (STORE) + SpreadsheetML */
+const XLSX = (function(){
+  const enc = new TextEncoder();
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const x = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const col = n => { let s = ""; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+
+  function zip(files){
+    const partes = [], central = []; let off = 0;
+    const now = new Date();
+    const dosT = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosD = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    for (const f of files) {
+      const nombre = enc.encode(f.nombre), data = enc.encode(f.contenido), crc = crc32(data);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dosT, true); lh.setUint16(12, dosD, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nombre.length, true); lh.setUint16(28, 0, true);
+      partes.push(new Uint8Array(lh.buffer), nombre, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dosT, true); ch.setUint16(14, dosD, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, nombre.length, true);
+      ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true); ch.setUint32(38, 0, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nombre);
+      off += 30 + nombre.length + data.length;
+    }
+    const tamCentral = central.reduce((s, b) => s + b.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, tamCentral, true); end.setUint32(16, off, true);
+    const todo = [...partes, ...central, new Uint8Array(end.buffer)];
+    const out = new Uint8Array(todo.reduce((s, b) => s + b.length, 0)); let p = 0;
+    for (const b of todo) { out.set(b, p); p += b.length; }
+    return out;
+  }
+
+  function crear(nombreHoja, columnas, filas){
+    const celda = (v, r, c, estilo) => {
+      const ref = col(c) + r;
+      if (typeof v === "number") return `<c r="${ref}" s="${estilo}"><v>${v}</v></c>`;
+      if (v === "" || v == null) return `<c r="${ref}" s="${estilo}"/>`;
+      return `<c r="${ref}" s="${estilo}" t="inlineStr"><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+    };
+    const ultimaCol = col(columnas.length - 1), ultimaFila = filas.length + 1;
+    const filasXml = [`<row r="1">${columnas.map((c, i) => celda(c.etiqueta, 1, i, 1)).join("")}</row>`]
+      .concat(filas.map((f, r) => `<row r="${r+2}">${f.map((v, i) => celda(v, r + 2, i, typeof v === "number" ? 3 : 2)).join("")}</row>`));
+    const hoja = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<dimension ref="A1:${ultimaCol}${ultimaFila}"/>
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>${columnas.map((c, i) => `<col min="${i+1}" max="${i+1}" width="${c.ancho}" customWidth="1"/>`).join("")}</cols>
+<sheetData>${filasXml.join("")}</sheetData>
+<autoFilter ref="A1:${ultimaCol}${ultimaFila}"/>
+</worksheet>`;
+    const estilos = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2"><font><sz val="11"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0E2233"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD0D5DB"/></left><right style="thin"><color rgb="FFD0D5DB"/></right><top style="thin"><color rgb="FFD0D5DB"/></top><bottom style="thin"><color rgb="FFD0D5DB"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="4">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+    return zip([
+      { nombre: "[Content_Types].xml", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+      { nombre: "_rels/.rels", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
+      { nombre: "docProps/core.xml", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Ranking de Agentes</dc:title><dc:creator>Priorización de Agentes · Colbún</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().replace(/\.\d{3}Z$/, "Z")}</dcterms:created></cp:coreProperties>` },
+      { nombre: "docProps/app.xml", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Excel</Application></Properties>` },
+      { nombre: "xl/workbook.xml", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(nombreHoja)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${x(nombreHoja)}'!$A$1:$${ultimaCol}$${ultimaFila}</definedName></definedNames></workbook>` },
+      { nombre: "xl/_rels/workbook.xml.rels", contenido: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { nombre: "xl/worksheets/sheet1.xml", contenido: hoja },
+      { nombre: "xl/styles.xml", contenido: estilos }
+    ]);
+  }
+  return { crear };
+})();
+
+/* Exposición mínima para pruebas automatizadas */
+window.__priorizacion = { XLSX, construirFilas, AGENTES, PROCESOS, CAMPOS };
+
+/* =====================================================================
+   INICIO
+   ===================================================================== */
+if (estado.activo) renderRanking(); else renderSeleccion();
+})();
+</script>
+</body>
+</html>
