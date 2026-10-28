@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceso · Priorización Colbún</title>
+  <style>
+    :root {
+      --navy: #0E2233;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --line: #dfe5ea;
+      --text: #1d2330;
+      --muted: #5d6a78;
+      --danger: #c62828;
+      --ok: #2e7d32;
+      --shadow: 0 8px 30px rgba(14, 34, 51, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); font-family: "Segoe UI", Arial, sans-serif; color: var(--text); }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(440px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 28px 24px 20px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--navy);
+      background: #edf3f8;
+      border-radius: 999px;
+      padding: 6px 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 2vw, 2.3rem);
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fbfcfd;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      outline: 3px solid rgba(43, 123, 216, 0.2);
+      border-color: #7ea7d7;
+    }
+
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    button {
+      border: none;
+      background: var(--navy);
+      color: #fff;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { opacity: 0.96; }
+
+    .error {
+      min-height: 22px;
+      margin-top: 14px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .success {
+      min-height: 22px;
+      margin-top: 14px;
+      color: var(--ok);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="tag">Acceso</div>
+    <h1>Priorización de agentes</h1>
+    <p>Ingresa el código de acceso para continuar con la evaluación.</p>
+
+    <form id="accessForm">
+      <label for="accessCode">Código de acceso</label>
+      <input id="accessCode" name="code" type="password" placeholder="Ingresa tu código" autocomplete="off" required />
+      <div class="actions">
+        <button type="submit">Entrar</button>
+      </div>
+    </form>
+
+    <div id="accessMessage" class="error" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const AUTH_STORAGE_KEY = 'priorizacion_access';
+    const form = document.getElementById('accessForm');
+    const codeInput = document.getElementById('accessCode');
+    const message = document.getElementById('accessMessage');
+
+    const hasAuth = localStorage.getItem(AUTH_STORAGE_KEY) === 'granted' && document.cookie.split(';').some((cookie) => cookie.trim() === 'priorizacion_access=granted');
+    if (hasAuth) {
+      window.location.href = '/app';
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const code = (codeInput.value || '').trim();
+      message.className = 'error';
+      message.textContent = '';
+
+      if (!code) {
+        message.textContent = 'Debes ingresar un código válido.';
+        codeInput.focus();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/access/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Código incorrecto.');
+        }
+
+        localStorage.setItem(AUTH_STORAGE_KEY, 'granted');
+        message.className = 'success';
+        message.textContent = 'Acceso correcto. Redirigiendo...';
+        window.location.href = '/app';
+      } catch (error) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        message.textContent = error.message || 'No se pudo validar el acceso.';
+        codeInput.value = '';
+        codeInput.focus();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -22,6 +22,14 @@ const memoryStore = {};
 const appEnvironment = String(process.env.APP_ENV || process.env.NODE_ENV || 'DEV').toUpperCase();
 const isProduction = appEnvironment === 'PROD';
 const hasPostgresConfig = Boolean(process.env.PGHOST || process.env.DATABASE_URL);
+const accessCode = String(process.env.ACCESS_CODE || '').trim();
+const accessCookieName = 'priorizacion_access';
+
+function hasValidAccessCookie(req) {
+  const cookies = String(req.headers.cookie || '').split(';');
+  const match = cookies.find((cookie) => cookie.trim().startsWith(`${accessCookieName}=`));
+  return Boolean(match && decodeURIComponent(match.trim().split('=').slice(1).join('=')) === 'granted');
+}
 
 const pool = isProduction && hasPostgresConfig
   ? new Pool({
@@ -450,7 +458,45 @@ async function listAllResponses() {
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  const publicRoutes = ['/', '/login', '/api/access/validate'];
+  if (publicRoutes.includes(req.path)) {
+    return next();
+  }
+
+  if (!hasValidAccessCookie(req)) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ ok: false, message: 'Acceso no autorizado.' });
+    }
+    return res.redirect('/');
+  }
+
+  next();
+});
 app.use(express.static(publicDir));
+
+app.post('/api/access/validate', (req, res) => {
+  const submittedCode = String(req.body?.code || '').trim();
+
+  if (!accessCode) {
+    console.error('[AUTH] ACCESS_CODE no está definido en .env');
+    return res.status(500).json({ ok: false, message: 'No se configuró un código de acceso.' });
+  }
+
+  if (submittedCode !== accessCode) {
+    return res.status(401).json({ ok: false, message: 'Código incorrecto.' });
+  }
+
+  res.cookie(accessCookieName, 'granted', {
+    httpOnly: false,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 1000 * 60 * 60 * 8,
+    secure: false
+  });
+
+  return res.json({ ok: true, message: 'Acceso concedido.' });
+});
 
 app.get('/api/health', async (_, res) => {
   res.json({
@@ -484,7 +530,17 @@ app.get('/api/respuestas', async (_, res) => {
   }
 });
 
-app.get('/respuestas', (_, res) => {
+app.get('/login', (req, res) => {
+  if (hasValidAccessCookie(req)) {
+    return res.redirect('/app');
+  }
+  res.sendFile(path.join(publicDir, 'login.html'));
+});
+
+app.get('/respuestas', (req, res) => {
+  if (!hasValidAccessCookie(req)) {
+    return res.redirect('/');
+  }
   res.sendFile(path.join(publicDir, 'respuestas.html'));
 });
 
@@ -526,7 +582,24 @@ app.post('/api/procesos/:processKey', async (req, res) => {
   }
 });
 
-app.get('*', (_, res) => {
+app.get('/', (req, res) => {
+  if (hasValidAccessCookie(req)) {
+    return res.redirect('/app');
+  }
+  res.sendFile(path.join(publicDir, 'login.html'));
+});
+
+app.get('/app', (req, res) => {
+  if (!hasValidAccessCookie(req)) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.get('*', (req, res) => {
+  if (!hasValidAccessCookie(req)) {
+    return res.redirect('/');
+  }
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 

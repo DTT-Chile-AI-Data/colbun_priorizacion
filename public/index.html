@@ -791,6 +791,13 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:10px 0 26px
 (function(){
 "use strict";
 
+const AUTH_STORAGE_KEY = 'priorizacion_access';
+const hasAuth = localStorage.getItem(AUTH_STORAGE_KEY) === 'granted' && document.cookie.split(';').some((cookie) => cookie.trim() === 'priorizacion_access=granted');
+if (!hasAuth) {
+  window.location.href = '/';
+  return;
+}
+
 /* =====================================================================
    CONFIGURACIÓN
    ===================================================================== */
